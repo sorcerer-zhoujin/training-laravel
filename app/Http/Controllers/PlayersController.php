@@ -52,9 +52,7 @@ class PlayersController extends Controller
             'money' => $request->input('money')
         ];
 
-        return Response(
-            Player::insertGetId($input)
-        );
+        return new Response(['id' => Player::insertGetId($input)]);
     }
 
     /**
