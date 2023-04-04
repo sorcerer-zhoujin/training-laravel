@@ -44,7 +44,17 @@ class PlayersController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        //$input = $request->all();
+        $input = [
+            'name' => $request->input('name'),
+            'hp' => $request->input('hp'),
+            'mp' => $request->input('mp'),
+            'money' => $request->input('money')
+        ];
+
+        return Response(
+            Player::insert($input)
+        );
     }
 
     /**
