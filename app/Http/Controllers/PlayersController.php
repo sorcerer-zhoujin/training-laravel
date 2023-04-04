@@ -53,7 +53,7 @@ class PlayersController extends Controller
         ];
 
         return Response(
-            Player::insert($input)
+            Player::insertGetId($input)
         );
     }
 
