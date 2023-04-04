@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\PlayerResource;
 use App\Models\Player;
+use Illuminate\Http\Client\ResponseSequence;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
@@ -75,7 +76,7 @@ class PlayersController extends Controller
      */
     public function destroy($id)
     {
-        //
+        return new Response(Player::find($id)->delete());
     }
 
     /**
