@@ -65,7 +65,16 @@ class PlayersController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //
+        $input = [
+            'name' => $request->input('name', Player::query()->where('id', $id)->value('name')),
+            'hp' => $request->input('hp', Player::query()->where('id', $id)->value('hp')),
+            'mp' => $request->input('mp', Player::query()->where('id', $id)->value('mp')),
+            'money' => $request->input('money', Player::query()->where('id', $id)->value('money'))
+        ];
+
+        Player::query()->where('id', $id)->update($input);
+
+        return null;
     }
 
     /**
@@ -76,7 +85,8 @@ class PlayersController extends Controller
      */
     public function destroy($id)
     {
-        return new Response(Player::find($id)->delete());
+        Player::find($id)->delete();
+        return null;
     }
 
     /**
