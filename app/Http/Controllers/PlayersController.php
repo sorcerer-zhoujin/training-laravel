@@ -19,7 +19,7 @@ class PlayersController extends Controller
     {
         return new Response(
             Player::query()->
-            select(['id', 'name'])->
+            select(['id', 'name', 'hp', 'mp', 'money'])->
             get());
     }
 
@@ -31,7 +31,9 @@ class PlayersController extends Controller
      */
     public function show($id)
     {
-
+        return new Response(
+            Player::find($id)
+        );
     }
 
     /**
