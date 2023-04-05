@@ -15,8 +15,8 @@ class CreatePlayerItemsTable extends Migration
     {
         Schema::create('player_items', function (Blueprint $table) {
             $table->id();
-            $table->integer('player_id')->comment("プレイヤーID");
-            $table->integer('item_id')->comment("アイテムID");
+            $table->bigInteger('player_id')->comment("プレイヤーID");
+            $table->bigInteger('item_id')->comment("アイテムID");
             $table->integer('count')->comment("アイテム数");
         });
     }
