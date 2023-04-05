@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\PlayerResource;
 use App\Models\Player;
+use Illuminate\Http\Client\ResponseSequence;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
@@ -64,7 +65,23 @@ class PlayersController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //
+        $data = array();
+        if ($request->has('name')) {
+            $data['name'] = $request['name'];
+        }
+        if ($request->has('hp')) {
+            $data['hp'] = $request['hp'];
+        }
+        if ($request->has('mp')) {
+            $data['mp'] = $request['mp'];
+        }
+        if ($request->has('money')) {
+            $data['money'] = $request['money'];
+        }
+
+        Player::query()->where('id', $id)->update($data);
+
+        return null;
     }
 
     /**
@@ -75,7 +92,8 @@ class PlayersController extends Controller
      */
     public function destroy($id)
     {
-        //
+        Player::find($id)->delete();
+        return null;
     }
 
     /**
