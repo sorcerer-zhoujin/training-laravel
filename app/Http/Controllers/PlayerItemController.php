@@ -36,6 +36,10 @@ class PlayerItemController extends Controller
 
     public function use(Request $request, $id)
     {
+        // エラーコード
+        $errCode = 400;
+
+        // HP/MP上限
         $maxHp = 200;
         $maxMp = 200;
 
@@ -48,20 +52,20 @@ class PlayerItemController extends Controller
 
         // データにアイテムのない（もしくはデータのない）場合
         if ($target->doesntExist() || $target->value('count') < 1) {
-            return new Response('アイテムなし', 400);
+            return new Response('アイテムなし', $errCode);
         }
         // アイテム情報
         $itemValue = Item::query()->where('id', $target->value('item_id'))->value('value');
         $itemCount = $target->value('count');
         if ($itemCount < $request->input('count'))
         {
-            return new Response('アイテム不足', 400);
+            return new Response('アイテム不足', $errCode);
         }
 
         // HP/MPは上限になった場合
         if ($playerHp >= $maxHp || $playerMp >= $maxMp)
         {
-            return new Response('HP/MPは上限になったため、アイテム使用不可', 400);
+            return new Response('HP/MPは上限になったため、アイテム使用不可', $errCode);
         }
 
         // HP回復
