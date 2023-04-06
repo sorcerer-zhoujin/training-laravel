@@ -46,7 +46,7 @@ class PlayerItemController extends Controller
         $playerHp = $player->value('hp');
         $playerMp = $player->value('mp');
 
-        // アイテムのない場合
+        // データにアイテムのない（もしくはデータのない）場合
         if ($target->doesntExist() || $target->value('count') < 1) {
             return new Response('アイテムなし', 400);
         }
