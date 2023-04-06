@@ -14,7 +14,7 @@ class CreatePlayerItemsTable extends Migration
     public function up()
     {
         Schema::create('player_items', function (Blueprint $table) {
-            $table->id();
+            //$table->id();
             $table->bigInteger('player_id')->comment("プレイヤーID");
             $table->bigInteger('item_id')->comment("アイテムID");
             $table->integer('count')->comment("アイテム数");

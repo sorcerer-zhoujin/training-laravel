@@ -10,7 +10,7 @@ class PlayerItemController extends Controller
 {
     public function add(Request $request, $id)
     {
-        $target = PlayerItem::query()->where('player_id', $id)->where('item_id', $request->input('itemId'));
+        $target = PlayerItem::query()->where(['player_id' => $id, 'item_id' => $request->input('itemId')]);
         $num = $request->input('count');
         // プレーヤーは既にアイテムも持っている場合（加算）
         if ($target->exists()) {
