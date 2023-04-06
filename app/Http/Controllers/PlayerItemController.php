@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use App\Models\Player;
 use App\Models\Item;
-use LDAP\Result;
 
 class PlayerItemController extends Controller
 {
