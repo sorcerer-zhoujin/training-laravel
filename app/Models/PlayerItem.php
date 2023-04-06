@@ -11,7 +11,7 @@ class PlayerItem extends Model
     use HasFactory;
 
     // 複合キー
-    protected $primaryKey = ['player_id', 'item_id'];
-    protected $fillable = ['player_id', 'item_id'];
-    public $incrementing = false;
+    //protected $primaryKey = ['player_id', 'item_id'];
+    //protected $fillable = ['player_id', 'item_id'];
+    //public $incrementing = false;
 }
