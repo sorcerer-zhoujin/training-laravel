@@ -46,24 +46,35 @@ class PlayerItemController extends Controller
         $player = Player::query()->where('id', $id);
         $playerHp = $player->value('hp');
         $playerMp = $player->value('mp');
-        // アイテム情報
-        $itemValue = Item::find($target->value('item_id'))->value('value');
-        $itemCount = $target->value('count');
 
         // アイテムなし判断
         if ($target->doesntExist() || $target->value('count') < 1) {
-            return new Response('error', 400);
+            return new Response('error1', 400);
+        }
+        // アイテム情報
+        $itemValue = Item::query()->where('id', $target->value('item_id'))->value('value');
+        $itemCount = $target->value('count');
+        if ($itemCount < $request->input('count'))
+        {
+            return new Response('error2', 400);
         }
 
         // HP回復
         if ($target->value('item_id') == 1 && $playerHp < $maxHp) {
-            $playerHp = ($playerHp + $itemValue) < $maxHp ? ($playerHp + $itemValue) : $maxHp;
-            $itemCount -= 1;
+            for ($i = $request->input('count'); $i > 0; $i--) {
+                $playerHp = ($playerHp + $itemValue) < $maxHp ? ($playerHp + $itemValue) : $maxHp;
+                $itemCount--;
+                if ($playerHp >= $maxHp) break;
+            }
         }
         // MP回復
         if ($target->value('item_id') == 2 && $playerMp < $maxMp) {
-            $playerMp = ($playerMp + $itemValue) < $maxMp ? ($playerMp + $itemValue) : $maxMp;
-            $itemCount -= 1;
+            for ($i = $request->input('count'); $i > 0; $i--) {
+                $playerMp = ($playerMp + $itemValue) < $maxMp ? ($playerMp + $itemValue) : $maxMp;
+                $itemCount--;
+                if ($playerMp >= $maxMp) break;
+            }
+            
         }
 
         // データ更新処理
