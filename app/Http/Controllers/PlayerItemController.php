@@ -47,20 +47,26 @@ class PlayerItemController extends Controller
         $playerHp = $player->value('hp');
         $playerMp = $player->value('mp');
 
-        // アイテムなし判断
+        // アイテムのない場合
         if ($target->doesntExist() || $target->value('count') < 1) {
-            return new Response('error1', 400);
+            return new Response('アイテムなし', 400);
         }
         // アイテム情報
         $itemValue = Item::query()->where('id', $target->value('item_id'))->value('value');
         $itemCount = $target->value('count');
         if ($itemCount < $request->input('count'))
         {
-            return new Response('error2', 400);
+            return new Response('アイテム不足', 400);
+        }
+
+        // HP/MPは上限になった場合
+        if ($playerHp >= $maxHp || $playerMp >= $maxMp)
+        {
+            return new Response('HP/MPは上限になったため、アイテム使用不可', 400);
         }
 
         // HP回復
-        if ($target->value('item_id') == 1 && $playerHp < $maxHp) {
+        if ($target->value('item_id') == 1) {
             for ($i = $request->input('count'); $i > 0; $i--) {
                 $playerHp = ($playerHp + $itemValue) < $maxHp ? ($playerHp + $itemValue) : $maxHp;
                 $itemCount--;
@@ -68,7 +74,7 @@ class PlayerItemController extends Controller
             }
         }
         // MP回復
-        if ($target->value('item_id') == 2 && $playerMp < $maxMp) {
+        if ($target->value('item_id') == 2) {
             for ($i = $request->input('count'); $i > 0; $i--) {
                 $playerMp = ($playerMp + $itemValue) < $maxMp ? ($playerMp + $itemValue) : $maxMp;
                 $itemCount--;
