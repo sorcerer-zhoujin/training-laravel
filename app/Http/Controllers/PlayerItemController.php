@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\PlayerItem;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use App\Models\Player;
+use App\Models\Item;
 
 class PlayerItemController extends Controller
 {
@@ -29,6 +31,74 @@ class PlayerItemController extends Controller
         return new Response([
             'itemId' => $request->input('itemId'),
             'count' => $num
+        ]);
+    }
+
+    public function use(Request $request, $id)
+    {
+        // エラーコード
+        $ERR_CODE = 400;
+
+        // HP/MP上限
+        $MAX_HP = 200;
+        $MAX_MP = 200;
+
+        // データ
+        $target = PlayerItem::query()->where(['player_id' => $id, 'item_id' => $request->input('itemId')]);
+        // プレーヤー情報
+        $player = Player::query()->where('id', $id);
+        $playerHp = $player->value('hp');
+        $playerMp = $player->value('mp');
+
+        // データにアイテムのない（もしくはデータのない）場合
+        if ($target->doesntExist() || $target->value('count') < 1) {
+            return new Response('アイテムなし', $ERR_CODE);
+        }
+        // アイテム情報
+        $itemValue = Item::query()->where('id', $target->value('item_id'))->value('value');
+        $itemCount = $target->value('count');
+        if ($itemCount < $request->input('count'))
+        {
+            return new Response('アイテム不足', $ERR_CODE);
+        }
+
+        // HP/MPは上限になった場合
+        if ($playerHp >= $MAX_HP || $playerMp >= $MAX_MP)
+        {
+            return new Response('HP/MPは上限になったため、アイテム使用不可', $ERR_CODE);
+        }
+
+        // HP回復
+        if ($target->value('item_id') == 1) {
+            for ($i = $request->input('count'); $i > 0; $i--) {
+                $playerHp = ($playerHp + $itemValue) < $MAX_HP ? ($playerHp + $itemValue) : $MAX_HP;
+                $itemCount--;
+                if ($playerHp >= $MAX_HP) break;
+            }
+        }
+        // MP回復
+        if ($target->value('item_id') == 2) {
+            for ($i = $request->input('count'); $i > 0; $i--) {
+                $playerMp = ($playerMp + $itemValue) < $MAX_MP ? ($playerMp + $itemValue) : $MAX_MP;
+                $itemCount--;
+                if ($playerMp >= $MAX_MP) break;
+            }
+            
+        }
+
+        // データ更新処理
+        $target->update(["count" => $itemCount]);
+        $player->update(['hp' => $playerHp, 'mp' => $playerMp]);
+
+        // レスポンス
+        return new Response([
+            'itemId' => $target->value("item_id"),
+            'count' => $itemCount,
+            'player' => [
+                'id' => $player->value('id'),
+                'hp' => $playerHp,
+                'mp' => $playerMp
+            ]
         ]);
     }
 }
