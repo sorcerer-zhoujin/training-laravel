@@ -37,11 +37,11 @@ class PlayerItemController extends Controller
     public function use(Request $request, $id)
     {
         // エラーコード
-        $errCode = 400;
+        $ERR_CODE = 400;
 
         // HP/MP上限
-        $maxHp = 200;
-        $maxMp = 200;
+        $MAX_HP = 200;
+        $MAX_MP = 200;
 
         // データ
         $target = PlayerItem::query()->where(['player_id' => $id, 'item_id' => $request->input('itemId')]);
@@ -52,36 +52,36 @@ class PlayerItemController extends Controller
 
         // データにアイテムのない（もしくはデータのない）場合
         if ($target->doesntExist() || $target->value('count') < 1) {
-            return new Response('アイテムなし', $errCode);
+            return new Response('アイテムなし', $ERR_CODE);
         }
         // アイテム情報
         $itemValue = Item::query()->where('id', $target->value('item_id'))->value('value');
         $itemCount = $target->value('count');
         if ($itemCount < $request->input('count'))
         {
-            return new Response('アイテム不足', $errCode);
+            return new Response('アイテム不足', $ERR_CODE);
         }
 
         // HP/MPは上限になった場合
-        if ($playerHp >= $maxHp || $playerMp >= $maxMp)
+        if ($playerHp >= $MAX_HP || $playerMp >= $MAX_MP)
         {
-            return new Response('HP/MPは上限になったため、アイテム使用不可', $errCode);
+            return new Response('HP/MPは上限になったため、アイテム使用不可', $ERR_CODE);
         }
 
         // HP回復
         if ($target->value('item_id') == 1) {
             for ($i = $request->input('count'); $i > 0; $i--) {
-                $playerHp = ($playerHp + $itemValue) < $maxHp ? ($playerHp + $itemValue) : $maxHp;
+                $playerHp = ($playerHp + $itemValue) < $MAX_HP ? ($playerHp + $itemValue) : $MAX_HP;
                 $itemCount--;
-                if ($playerHp >= $maxHp) break;
+                if ($playerHp >= $MAX_HP) break;
             }
         }
         // MP回復
         if ($target->value('item_id') == 2) {
             for ($i = $request->input('count'); $i > 0; $i--) {
-                $playerMp = ($playerMp + $itemValue) < $maxMp ? ($playerMp + $itemValue) : $maxMp;
+                $playerMp = ($playerMp + $itemValue) < $MAX_MP ? ($playerMp + $itemValue) : $MAX_MP;
                 $itemCount--;
-                if ($playerMp >= $maxMp) break;
+                if ($playerMp >= $MAX_MP) break;
             }
             
         }
