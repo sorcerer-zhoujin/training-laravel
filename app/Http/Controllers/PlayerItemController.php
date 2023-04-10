@@ -110,6 +110,9 @@ class PlayerItemController extends Controller
 
         // プレーヤー情報
         $player = Player::query()->where('id', $id);
+        // データ存在チェック
+        if($player->doesntExist()) return;
+        // プレーヤー所持金
         $playerMoney = $player->value('money');
         // 所持金の判断
         if ($playerMoney < $gachaCost) {
