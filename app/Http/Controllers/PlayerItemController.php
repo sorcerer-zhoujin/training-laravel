@@ -112,7 +112,7 @@ class PlayerItemController extends Controller
         $player = Player::query()->where('id', $id);
         $playerMoney = $player->value('money');
         // 所持金の判断
-        if ($player->value('money') < $gachaCost) {
+        if ($playerMoney < $gachaCost) {
             return new Response('ガチャ費用不足');
         }
         // お金かかる
