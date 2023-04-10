@@ -14,7 +14,7 @@ class AddPercentToItemsTable extends Migration
     public function up()
     {
         Schema::table('items', function (Blueprint $table) {
-            $table->unsignedInteger('percent');
+            $table->unsignedInteger('percent')->default(30);
         });
     }
 
@@ -25,8 +25,10 @@ class AddPercentToItemsTable extends Migration
      */
     public function down()
     {
-        Schema::table('items', function (Blueprint $table) {
-            $table->dropColumn('percent');
-        });
+        if (Schema::hasTable('items')) {
+            Schema::table('items', function (Blueprint $table) {
+                $table->dropColumn('percent');
+            });
+        }
     }
 }
