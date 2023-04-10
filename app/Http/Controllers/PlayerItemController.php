@@ -29,7 +29,7 @@ class PlayerItemController extends Controller
         }
 
         return new Response([
-            'item_id' => $request->input('itemId'),
+            'itemId' => $request->input('itemId'),
             'count' => $num
         ]);
     }
