@@ -12,7 +12,7 @@ class PlayerItemController extends Controller
 {
     public function add(Request $request, $id)
     {
-        $target = PlayerItem::query()->where(['player_id' => $id, 'itemId' => $request->input('itemId')]);
+        $target = PlayerItem::query()->where(['player_id' => $id, 'item_id' => $request->input('itemId')]);
         $num = $request->input('count');
         // プレーヤーは既にアイテムも持っている場合（加算）
         if ($target->exists()) {
@@ -23,13 +23,13 @@ class PlayerItemController extends Controller
         else {
             PlayerItem::insertGetId([
                 'player_id' => $id,
-                'itemId' => $request->input('itemId'),
+                'item_id' => $request->input('itemId'),
                 'count' => $num
             ]);
         }
 
         return new Response([
-            'itemId' => $request->input('itemId'),
+            'item_id' => $request->input('itemId'),
             'count' => $num
         ]);
     }
@@ -44,7 +44,7 @@ class PlayerItemController extends Controller
         $MAX_MP = 200;
 
         // データ
-        $target = PlayerItem::query()->where(['player_id' => $id, 'itemId' => $request->input('itemId')]);
+        $target = PlayerItem::query()->where(['player_id' => $id, 'item_id' => $request->input('itemId')]);
         // プレーヤー情報
         $player = Player::query()->where('id', $id);
         $playerHp = $player->value('hp');
@@ -55,7 +55,7 @@ class PlayerItemController extends Controller
             return new Response('アイテムなし', $ERR_CODE);
         }
         // アイテム情報
-        $itemValue = Item::query()->where('id', $target->value('itemId'))->value('value');
+        $itemValue = Item::query()->where('id', $target->value('item_id'))->value('value');
         $itemCount = $target->value('count');
         if ($itemCount < $request->input('count'))
         {
@@ -69,7 +69,7 @@ class PlayerItemController extends Controller
         }
 
         // HP回復
-        if ($target->value('itemId') == 1) {
+        if ($target->value('item_id') == 1) {
             for ($i = $request->input('count'); $i > 0; $i--) {
                 $playerHp = ($playerHp + $itemValue) < $MAX_HP ? ($playerHp + $itemValue) : $MAX_HP;
                 $itemCount--;
@@ -77,7 +77,7 @@ class PlayerItemController extends Controller
             }
         }
         // MP回復
-        if ($target->value('itemId') == 2) {
+        if ($target->value('item_id') == 2) {
             for ($i = $request->input('count'); $i > 0; $i--) {
                 $playerMp = ($playerMp + $itemValue) < $MAX_MP ? ($playerMp + $itemValue) : $MAX_MP;
                 $itemCount--;
@@ -92,7 +92,7 @@ class PlayerItemController extends Controller
 
         // レスポンス
         return new Response([
-            'itemId' => $target->value("itemId"),
+            'itemId' => $target->value("item_id"),
             'count' => $itemCount,
             'player' => [
                 'id' => $player->value('id'),
