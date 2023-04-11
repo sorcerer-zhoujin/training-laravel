@@ -136,9 +136,11 @@ class PlayerItemController extends Controller
 
         // ガチャ結果用の配列
         $result = $this->lottery($lootPercent, $COUNT);
-        // アウトプット用の配列
-        $resultItemCounter = array_fill(0, $itemPool->count() + 1, 0);
         if (empty($result)) return;
+        // アイテム個数加算用の変数
+        $resultItemCounter = array_fill(0, $itemPool->count() + 1, 0);
+        // JSON出力用の配列
+        $resultJson = [];
 
         // プレーヤーのアイテム情報を配列に保存
         $playerItems = PlayerItem::where('player_id', $id)
@@ -157,17 +159,21 @@ class PlayerItemController extends Controller
             $resultItemCounter[$itemId]++;
             // ハズレなら更新不要
             if ($itemId == 0) continue;
-            //　プレーヤーのアイテム情報は既にテーブルに存在する場合、更新のみ
-            if (isset($playerItems[$itemId])) {
-                $playerItems[$itemId]['count']++;
-            }
-            //　プレーヤーのアイテム情報は存在しない、新規作成
-            else {
+            //　プレーヤーのアイテム情報は存在しない場合は新規作成
+            if (!isset($playerItems[$itemId])) {
                 $playerItems[$itemId] = ['count' => 1];
             }
         }
         // データベース更新処理（$itemPoolのアイテム数回のループ）
         foreach ($itemPool as $item){
+            // アイテム加算
+            $playerItems[$item->id]['count'] += $resultItemCounter[$item->id];
+            // JSON出力を作る
+            $resultJson[] =[
+                'itemId' => $item->id,
+                'count' => $resultItemCounter[$item->id]
+            ];
+            // データベースにアクセス、更新
             PlayerItem::query()
             ->where('player_id', $id)
             ->where('item_id', $item->id)
@@ -176,10 +182,7 @@ class PlayerItemController extends Controller
         
         // レスポンス
         return new Request([
-            'results' => [
-                'itemId' => array_keys($resultItemCounter),
-                'count' => array_values($resultItemCounter)
-            ],
+            'results' => $resultJson,
             'player' => [
                 'money' => $playerMoney,
                 'items' => $playerItems
