@@ -152,29 +152,26 @@ class PlayerItemController extends Controller
             })
             ->toArray();
         
-        // 結果によるデータを更新
+        // 結果によるデータを更新(メモリ上)
         foreach ($result as $itemId) {
             $resultItemCounter[$itemId]++;
-            // ハズレ
+            // ハズレなら更新不要
             if ($itemId == 0) continue;
             //　プレーヤーのアイテム情報は既にテーブルに存在する場合、更新のみ
             if (isset($playerItems[$itemId])) {
                 $playerItems[$itemId]['count']++;
-                PlayerItem::query()
-                    ->where('player_id', $id)
-                    ->where('item_id', $itemId)
-                    ->update(['count' => $playerItems[$itemId]['count']]);
             }
             //　プレーヤーのアイテム情報は存在しない、新規作成
             else {
-                PlayerItem::query()
-                    ->insert([
-                    'player_id' => $id,
-                    'item_id' => $itemId,
-                    'count' => 1
-                ]);
                 $playerItems[$itemId] = ['count' => 1];
             }
+        }
+        // データベース更新処理（$itemPoolのアイテム数回のループ）
+        foreach ($itemPool as $item){
+            PlayerItem::query()
+            ->where('player_id', $id)
+            ->where('item_id', $item->id)
+            ->update(['count' => $playerItems[$item->id]['count']]);
         }
         
         // レスポンス
