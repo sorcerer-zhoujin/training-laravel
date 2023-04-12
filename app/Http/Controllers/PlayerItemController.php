@@ -19,7 +19,7 @@ class PlayerItemController extends Controller
         DB::beginTransaction();
 
         try {
-            $target = PlayerItem::query()->where(['player_id' => $id, 'item_id' => $request->input('itemId')])->lockForUpdate();
+            $target = PlayerItem::query()->where(['player_id' => $id, 'item_id' => $request->input('itemId')]);
             $num = $request->input('count');
             // プレーヤーは既にアイテムも持っている場合（加算）
             if ($target->exists()) {
@@ -58,7 +58,7 @@ class PlayerItemController extends Controller
 
         try {
             // データクエリ
-            $target = PlayerItem::query()->where(['player_id' => $id, 'item_id' => $request->input('itemId')])->lockForUpdate();
+            $target = PlayerItem::query()->where(['player_id' => $id, 'item_id' => $request->input('itemId')]);
             $player = Player::query()->where('id', $id)->lockForUpdate();
             // プレーヤー情報
             $playerHp = $player->value('hp');
@@ -134,7 +134,7 @@ class PlayerItemController extends Controller
 
         try {
             // プレーヤー情報
-            $player = Player::query()->where('id', $id);
+            $player = Player::query()->where('id', $id)->lockForUpdate();
             // データ存在チェック
             if($player->doesntExist()) return new Exception('プレイヤー情報を見つかりませんでした');
             // プレーヤー所持金
