@@ -42,7 +42,7 @@ class PlayerItemController extends Controller
             'count' => $num
             ]);
         } catch (\Exception $e) {
-            DB::rollback();
+            DB::rollBack();
             return response()->json(['error' => $e->getMessage()], self::ERR_CODE);
         }
 
@@ -118,7 +118,7 @@ class PlayerItemController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
-            DB::rollback();
+            DB::rollBack();
             return response()->json(['error' => $e->getMessage()], self::ERR_CODE);
         }
 
@@ -130,86 +130,98 @@ class PlayerItemController extends Controller
         $COST = 10;                            // ガチャ一回の費用
         $gachaCost = $COST * $COUNT;           // ガチャ合計費用
 
-        // プレーヤー情報
-        $player = Player::query()->where('id', $id);
-        // データ存在チェック
-        if($player->doesntExist()) return;
-        // プレーヤー所持金
-        $playerMoney = $player->value('money');
-        // 所持金の判断
-        if ($playerMoney < $gachaCost) {
-            return new Response('ガチャ費用不足');
-        }
-        // お金かかる
-        else {
-            $playerMoney -= $gachaCost;
-            $player->update([
-                'money' => $playerMoney
-            ]);
-        }
+        DB::beginTransaction();
 
-        // すべてのアイテムのデータ
-        $itemPool = Item::get();
-        // アイテムデータから確率を取得して配列に保存
-        $lootPercent = [];
-        foreach ($itemPool as $item) {
-            $lootPercent[$item->id] = $item->percent;
-        }
-
-        // ガチャ結果用の配列
-        $result = $this->lottery($lootPercent, $COUNT);
-        if (empty($result)) return;
-        // アイテム個数加算用の変数
-        $resultItemCounter = array_fill(0, $itemPool->count() + 1, 0);
-        // JSON出力用の配列
-        $resultJson = [];
-
-        // プレーヤーのアイテム情報を配列に保存
-        $playerItems = PlayerItem::where('player_id', $id)
-            ->get()
-            ->keyBy('item_id')
-            ->map(function ($item) {
-                return [
-                    'itemId' => $item->item_id,
-                    'count' => $item->count
-                ];
-            })
-            ->toArray();
-
-        // 結果によるデータを更新(メモリ上)
-        foreach ($result as $itemId) {
-            $resultItemCounter[$itemId]++;
-            // ハズレなら更新不要
-            if ($itemId == 0) continue;
-            //　プレーヤーのアイテム情報は存在しない場合は新規作成
-            if (!isset($playerItems[$itemId])) {
-                $playerItems[$itemId] = ['count' => 1];
+        try {
+            // プレーヤー情報
+            $player = Player::query()->where('id', $id);
+            // データ存在チェック
+            if($player->doesntExist()) return new Exception('プレイヤー情報を見つかりませんでした');
+            // プレーヤー所持金
+            $playerMoney = $player->value('money');
+            // 所持金の判断
+            if ($playerMoney < $gachaCost) {
+                throw new Exception("ガチャ費用不足");
             }
-        }
-        // データベース更新処理（$itemPoolのアイテム数回のループ）
-        foreach ($itemPool as $item){
-            // アイテム加算
-            $playerItems[$item->id]['count'] += $resultItemCounter[$item->id];
-            // JSON出力を作る
-            $resultJson[] =[
-                'itemId' => $item->id,
-                'count' => $resultItemCounter[$item->id]
-            ];
-            // データベースにアクセス、更新
-            PlayerItem::query()
-            ->where('player_id', $id)
-            ->where('item_id', $item->id)
-            ->update(['count' => $playerItems[$item->id]['count']]);
+            // お金かかる
+            else {
+                $playerMoney -= $gachaCost;
+                $player->update([
+                    'money' => $playerMoney
+                ]);
+            }
+
+            // すべてのアイテムのデータ
+            $itemPool = Item::get();
+            // アイテムデータから確率を取得して配列に保存
+            $lootPercent = [];
+            foreach ($itemPool as $item) {
+                $lootPercent[$item->id] = $item->percent;
+            }
+
+            // ガチャ結果用の配列
+            $result = $this->lottery($lootPercent, $COUNT);
+            if (empty($result)) return new Exception('Unknown Error');
+            // アイテム個数加算用の変数
+            $resultItemCounter = array_fill(0, $itemPool->count() + 1, 0);
+            // JSON出力用の配列
+            $resultJson = [];
+
+            // プレーヤーのアイテム情報を配列に保存
+            $playerItems = PlayerItem::where('player_id', $id)
+                ->get()
+                ->keyBy('item_id')
+                ->map(function ($item) {
+                    return [
+                        'itemId' => $item->item_id,
+                        'count' => $item->count
+                    ];
+                })
+                ->toArray();
+
+            // 結果によるデータを更新(メモリ上)
+            foreach ($result as $itemId) {
+                $resultItemCounter[$itemId]++;
+                // ハズレなら更新不要
+                if ($itemId == 0) continue;
+                //　プレーヤーのアイテム情報は存在しない場合は新規作成
+                if (!isset($playerItems[$itemId])) {
+                    $playerItems[$itemId] = ['count' => 1];
+                }
+            }
+            // データベース更新処理（$itemPoolのアイテム数回のループ）
+            foreach ($itemPool as $item){
+                // アイテム加算
+                $playerItems[$item->id]['count'] += $resultItemCounter[$item->id];
+                // JSON出力を作る
+                $resultJson[] =[
+                    'itemId' => $item->id,
+                    'count' => $resultItemCounter[$item->id]
+                ];
+                // データベースにアクセス、更新
+                PlayerItem::query()
+                ->where('player_id', $id)
+                ->where('item_id', $item->id)
+                ->update(['count' => $playerItems[$item->id]['count']]);
+            }
+
+            DB::commit();
+
+            // レスポンス
+            return new Request([
+                'results' => $resultJson,
+                'player' => [
+                    'money' => $playerMoney,
+                    'items' => $playerItems
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => $e->getMessage()], self::ERR_CODE);
         }
 
-        // レスポンス
-        return new Request([
-            'results' => $resultJson,
-            'player' => [
-                'money' => $playerMoney,
-                'items' => $playerItems
-            ]
-        ]);
+
     }
 
     // ガチャ結果計算用の関数
