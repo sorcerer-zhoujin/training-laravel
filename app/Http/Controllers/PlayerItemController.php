@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use App\Models\Player;
 use App\Models\Item;
+use Exception;
 use Illuminate\Support\Facades\DB;
 
 class PlayerItemController extends Controller
@@ -15,26 +16,36 @@ class PlayerItemController extends Controller
 
     public function add(Request $request, $id)
     {
-        $target = PlayerItem::query()->where(['player_id' => $id, 'item_id' => $request->input('itemId')]);
-        $num = $request->input('count');
-        // プレーヤーは既にアイテムも持っている場合（加算）
-        if ($target->exists()) {
-            $num += $target->value('count');
-            $target->update(['count' => $num]);
-        }
-        // プレーヤーは指定されたアイテムを持っていない場合（追加）
-        else {
-            PlayerItem::insertGetId([
-                'player_id' => $id,
-                'item_id' => $request->input('itemId'),
-                'count' => $num
-            ]);
-        }
+        DB::beginTransaction();
 
-        return new Response([
+        try {
+            $target = PlayerItem::query()->where(['player_id' => $id, 'item_id' => $request->input('itemId')])->lockForUpdate();
+            $num = $request->input('count');
+            // プレーヤーは既にアイテムも持っている場合（加算）
+            if ($target->exists()) {
+                $num += $target->value('count');
+                $target->update(['count' => $num]);
+            }
+            // プレーヤーは指定されたアイテムを持っていない場合（追加）
+            else {
+                PlayerItem::insertGetId([
+                    'player_id' => $id,
+                    'item_id' => $request->input('itemId'),
+                    'count' => $num
+                ]);
+            }
+
+            DB::commit();
+
+            return new Response([
             'itemId' => $request->input('itemId'),
             'count' => $num
-        ]);
+            ]);
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json(['error' => $e->getMessage()], self::ERR_CODE);
+        }
+
     }
 
     public function use(Request $request, $id)
@@ -62,14 +73,13 @@ class PlayerItemController extends Controller
             $itemCount = $target->value('count');
             if ($itemCount < $request->input('count'))
             {
-                throw new Exception('アイテム不足');
+                //throw new Exception('アイテム不足');
             }
 
             // HP/MPは上限になった場合
             if ($playerHp >= $MAX_HP || $playerMp >= $MAX_MP)
             {
                 throw new Exception('HP/MPは上限になったため、アイテム使用不可');
-
             }
 
             // HP回復
