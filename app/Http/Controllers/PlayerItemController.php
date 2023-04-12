@@ -7,9 +7,12 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use App\Models\Player;
 use App\Models\Item;
+use Illuminate\Support\Facades\DB;
 
 class PlayerItemController extends Controller
 {
+    const ERR_CODE = 400;
+
     public function add(Request $request, $id)
     {
         $target = PlayerItem::query()->where(['player_id' => $id, 'item_id' => $request->input('itemId')]);
@@ -36,70 +39,79 @@ class PlayerItemController extends Controller
 
     public function use(Request $request, $id)
     {
-        // エラーコード
-        $ERR_CODE = 400;
-
         // HP/MP上限
         $MAX_HP = 200;
         $MAX_MP = 200;
 
-        // データ
-        $target = PlayerItem::query()->where(['player_id' => $id, 'item_id' => $request->input('itemId')]);
-        // プレーヤー情報
-        $player = Player::query()->where('id', $id);
-        $playerHp = $player->value('hp');
-        $playerMp = $player->value('mp');
+        DB::beginTransaction();
 
-        // データにアイテムのない（もしくはデータのない）場合
-        if ($target->doesntExist() || $target->value('count') < 1) {
-            return new Response('アイテムなし', $ERR_CODE);
-        }
-        // アイテム情報
-        $itemValue = Item::query()->where('id', $target->value('item_id'))->value('value');
-        $itemCount = $target->value('count');
-        if ($itemCount < $request->input('count'))
-        {
-            return new Response('アイテム不足', $ERR_CODE);
-        }
+        try {
+            // データクエリ
+            $target = PlayerItem::query()->where(['player_id' => $id, 'item_id' => $request->input('itemId')])->lockForUpdate();
+            $player = Player::query()->where('id', $id)->lockForUpdate();
+            // プレーヤー情報
+            $playerHp = $player->value('hp');
+            $playerMp = $player->value('mp');
 
-        // HP/MPは上限になった場合
-        if ($playerHp >= $MAX_HP || $playerMp >= $MAX_MP)
-        {
-            return new Response('HP/MPは上限になったため、アイテム使用不可', $ERR_CODE);
-        }
-
-        // HP回復
-        if ($target->value('item_id') == 1) {
-            for ($i = $request->input('count'); $i > 0; $i--) {
-                $playerHp = ($playerHp + $itemValue) < $MAX_HP ? ($playerHp + $itemValue) : $MAX_HP;
-                $itemCount--;
-                if ($playerHp >= $MAX_HP) break;
+            // データにアイテムのない（もしくはデータのない）場合
+            if ($target->doesntExist() || $target->value('count') < 1) {
+                //throw new Exception('アイテムなし');
             }
-        }
-        // MP回復
-        if ($target->value('item_id') == 2) {
-            for ($i = $request->input('count'); $i > 0; $i--) {
-                $playerMp = ($playerMp + $itemValue) < $MAX_MP ? ($playerMp + $itemValue) : $MAX_MP;
-                $itemCount--;
-                if ($playerMp >= $MAX_MP) break;
+            // アイテム情報
+            $itemValue = Item::query()->where('id', $target->value('item_id'))->value('value');
+            $itemCount = $target->value('count');
+            if ($itemCount < $request->input('count'))
+            {
+                throw new Exception('アイテム不足');
             }
-            
+
+            // HP/MPは上限になった場合
+            if ($playerHp >= $MAX_HP || $playerMp >= $MAX_MP)
+            {
+                throw new Exception('HP/MPは上限になったため、アイテム使用不可');
+
+            }
+
+            // HP回復
+            if ($target->value('item_id') == 1) {
+                for ($i = $request->input('count'); $i > 0; $i--) {
+                    $playerHp = ($playerHp + $itemValue) < $MAX_HP ? ($playerHp + $itemValue) : $MAX_HP;
+                    $itemCount--;
+                    if ($playerHp >= $MAX_HP) break;
+                }
+            }
+            // MP回復
+            if ($target->value('item_id') == 2) {
+                for ($i = $request->input('count'); $i > 0; $i--) {
+                    $playerMp = ($playerMp + $itemValue) < $MAX_MP ? ($playerMp + $itemValue) : $MAX_MP;
+                    $itemCount--;
+                    if ($playerMp >= $MAX_MP) break;
+                }
+
+            }
+
+            // データ更新処理
+            $target->update(["count" => $itemCount]);
+            $player->update(['hp' => $playerHp, 'mp' => $playerMp]);
+
+            // コミット
+            DB::commit();
+
+            // レスポンス
+            return new Response([
+                'itemId' => $target->value("item_id"),
+                'count' => $itemCount,
+                'player' => [
+                    'id' => $player->value('id'),
+                    'hp' => $playerHp,
+                    'mp' => $playerMp
+                ]
+            ]);
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json(['error' => $e->getMessage()], self::ERR_CODE);
         }
 
-        // データ更新処理
-        $target->update(["count" => $itemCount]);
-        $player->update(['hp' => $playerHp, 'mp' => $playerMp]);
-
-        // レスポンス
-        return new Response([
-            'itemId' => $target->value("item_id"),
-            'count' => $itemCount,
-            'player' => [
-                'id' => $player->value('id'),
-                'hp' => $playerHp,
-                'mp' => $playerMp
-            ]
-        ]);
     }
 
     public function gacha(Request $request, $id)
@@ -153,7 +165,7 @@ class PlayerItemController extends Controller
                 ];
             })
             ->toArray();
-        
+
         // 結果によるデータを更新(メモリ上)
         foreach ($result as $itemId) {
             $resultItemCounter[$itemId]++;
@@ -179,7 +191,7 @@ class PlayerItemController extends Controller
             ->where('item_id', $item->id)
             ->update(['count' => $playerItems[$item->id]['count']]);
         }
-        
+
         // レスポンス
         return new Request([
             'results' => $resultJson,
@@ -187,14 +199,14 @@ class PlayerItemController extends Controller
                 'money' => $playerMoney,
                 'items' => $playerItems
             ]
-        ]); 
+        ]);
     }
 
     // ガチャ結果計算用の関数
     private function lottery($lootPercent, $numTimes) {
         $MAX_PERCENT = 100;
         $totalPercent = array_sum($lootPercent);
-    
+
         if ($totalPercent < $MAX_PERCENT) {
             $lootPercent[0] = $MAX_PERCENT - $totalPercent;
             $totalPercent = $MAX_PERCENT;
@@ -205,17 +217,17 @@ class PlayerItemController extends Controller
         for ($i = 0; $i < $numTimes; $i++) {
             $random = rand(1, $totalPercent);
             $currentPercent = 0;
-    
+
             foreach ($lootPercent as $id => $percent) {
                 $currentPercent += $percent;
-    
+
                 if ($random <= $currentPercent) {
                     $result[] = $id;
                     break;
                 }
             }
         }
-    
+
         return $result;
     }
 }
