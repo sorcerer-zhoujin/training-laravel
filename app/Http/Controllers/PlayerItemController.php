@@ -58,8 +58,8 @@ class PlayerItemController extends Controller
 
         try {
             // データクエリ
-            $target = PlayerItem::query()->where(['player_id' => $id, 'item_id' => $request->input('itemId')]);
             $player = Player::query()->where('id', $id)->lockForUpdate();
+            $target = PlayerItem::query()->where(['player_id' => $id, 'item_id' => $request->input('itemId')]);
             // プレーヤー情報
             $playerHp = $player->value('hp');
             $playerMp = $player->value('mp');
