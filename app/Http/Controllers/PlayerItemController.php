@@ -19,9 +19,8 @@ class PlayerItemController extends Controller
         DB::beginTransaction();
 
         try {
-            $target = PlayerItem::query()->where(['player_id' => $id, 'item_id' => $request->input('itemId')])->lockForUpdate();
-            $player = Player::query()->where('id', $id);
-            $player->lockForUpdate();
+            Player::find($id)->lockForUpdate();
+            $target = PlayerItem::query()->where(['player_id' => $id, 'item_id' => $request->input('itemId')]);
             $num = $request->input('count');
             // プレーヤーは既にアイテムも持っている場合（加算）
             if ($target->exists()) {
